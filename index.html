@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Context-Aware Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            margin-top: 50px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+        }
+        h1 {
+            text-align: center;
+        }
+        label, input {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        #otpSection {
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter your username" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter your password" required>
+
+            <!-- Display location, device info, and scores -->
+            <p id="locationDisplay">Fetching location...</p>
+            <p id="deviceInfoDisplay"></p>
+
+            <!-- OTP Section -->
+            <div id="otpSection">
+                <label for="otpInput">Enter OTP:</label>
+                <input type="text" id="otpInput" placeholder="Enter OTP">
+                <button type="button" id="verifyOtpBtn">Verify OTP</button>
+            </div>
+
+            <button type="submit">Login</button>
+        </form>
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        let generatedOtp = null;
+
+        // Function to fetch user's geolocation
+        function getLocation() {
+            const locationDisplay = document.getElementById('locationDisplay');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        locationDisplay.innerText = `Location: Latitude: ${latitude}, Longitude: ${longitude}`;
+                    },
+                    () => {
+                        locationDisplay.innerText = "Location not available";
+                    }
+                );
+            } else {
+                locationDisplay.innerText = "Geolocation not supported";
+            }
+        }
+
+        // Function to fetch device information
+        function getDeviceInfo() {
+            const deviceInfoDisplay = document.getElementById('deviceInfoDisplay');
+            const userAgent = navigator.userAgent;
+            let trustScore = 0;
+
+            if (userAgent.includes("Chrome")) trustScore = 90;
+            else if (userAgent.includes("Firefox")) trustScore = 80;
+            else trustScore = 50;
+
+            deviceInfoDisplay.innerText = `Device: ${userAgent}, Trust Score: ${trustScore}`;
+            return trustScore;
+        }
+
+        // Function to generate a random OTP
+        function generateOtp() {
+            return Math.floor(100000 + Math.random() * 900000); // 6-digit OTP
+        }
+
+        // Function to trigger OTP
+        function triggerOtp() {
+            generatedOtp = generateOtp();
+            alert(`Your OTP is: ${generatedOtp}`); // Display OTP for demo purposes
+            document.getElementById('otpSection').style.display = 'block';
+        }
+
+        // Call location and device info functions on page load
+        window.onload = function () {
+            getLocation();
+            getDeviceInfo();
+        };
+
+        // Login form submission handler
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const locationDisplay = document.getElementById('locationDisplay').innerText;
+            const deviceTrustScore = getDeviceInfo(); // Fetch trust score
+            let riskScore = 0;
+
+            // Risk logic
+            if (locationDisplay.includes("not available") || locationDisplay.includes("supported")) {
+                riskScore += 50;
+            }
+            if (deviceTrustScore < 70) {
+                riskScore += 50;
+            }
+
+            const message = document.getElementById('message');
+
+            if (riskScore < 50) {
+                message.innerText = "Access Granted: Low risk detected!";
+                message.style.color = "green";
+            } else if (riskScore < 80) {
+                message.innerText = "Access Conditional: Moderate risk detected!";
+                message.style.color = "orange";
+                triggerOtp(); // Trigger OTP for moderate risk
+            } else {
+                message.innerText = "Access Denied: High risk detected! OTP Required.";
+                message.style.color = "red";
+                triggerOtp(); // Trigger OTP for high risk
+            }
+        });
+
+        // OTP verification handler
+        document.getElementById('verifyOtpBtn').addEventListener('click', function () {
+            const otpInput = document.getElementById('otpInput').value;
+            const message = document.getElementById('message');
+
+            if (otpInput == generatedOtp) {
+                message.innerText = "Access Granted: OTP Verified!";
+                message.style.color = "green";
+            } else {
+                message.innerText = "Invalid OTP. Access Denied.";
+                message.style.color = "red";
+            }
+        });
+    </script>
+</body>
+</html>
